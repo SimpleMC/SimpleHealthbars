@@ -1,4 +1,4 @@
-MCHealthBars
+SimpleHealthbars
 ============
 
 Health Bars for Minecraft
