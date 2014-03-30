@@ -6,44 +6,85 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
+/**
+ * Health bar listener
+ * 
+ * Listens to events and will create and manage mob health bars
+ * 
+ * @author Taylor
+ * 
+ */
 public class SimpleHealthbarsListener implements Listener
 {
-    private final int BAR_LENGTH = 20;
-    private final char BAR_CHAR = 0x25ae;
-    
     private Plugin plugin; // plugin instance
     private BukkitScheduler scheduler; // scheduler
-    private Map<Integer, HealthBar> tasks; // tasks scheduled(by int) to remove
-                                           // bar
+    private Map<Integer, HealthBar> tasks; // entity health bars
+    private int barLength; // length(in barChars) of health bar
+    private char barChar; // character to construct bar out of
+    private boolean showMobNames; // should we have mob names above heads?
     
-    public SimpleHealthbarsListener(Plugin plugin)
+    /**
+     * Create health bar listener
+     * 
+     * @param plugin
+     *            plugin instance
+     * @param barLength
+     *            length(in barChars) of health bar
+     * @param barChar
+     *            character to construct bar out of
+     * @param showMobNames
+     *            should we have mob names above heads?
+     */
+    public SimpleHealthbarsListener(Plugin plugin, int barLength, char barChar,
+            boolean showMobNames)
     {
         this.plugin = plugin;
+        this.barLength = barLength;
+        this.barChar = barChar;
+        this.showMobNames = showMobNames;
+        
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         
         scheduler = Bukkit.getScheduler();
         tasks = new HashMap<Integer, HealthBar>();
     }
     
+    /**
+     * Listen for entity damage events
+     * 
+     * @param event
+     */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onEntityDamageEvent(EntityDamageEvent event)
     {
-        healthBar(event.getEntity(), event.getDamage());
+        if (!isBoss(event.getEntityType()))
+            healthBar(event.getEntity(), event.getDamage());
     }
     
+    /**
+     * Create/update health bar
+     * 
+     * @param entity
+     *            entity to put bar over
+     * @param eventDamage
+     *            damage from the event to apply to health bar
+     */
     private void healthBar(final Entity entity, double eventDamage)
     {
-        if (!(entity instanceof LivingEntity)) return;
+        // ignore nonliving entities and for now, players
+        if (!(entity instanceof LivingEntity) || entity instanceof Player)
+            return;
+        
         final LivingEntity living = (LivingEntity) entity;
         
         String originalName = findOriginalName(living);
@@ -107,19 +148,13 @@ public class SimpleHealthbarsListener implements Listener
      */
     private String findOriginalName(LivingEntity living)
     {
-        if (living instanceof Player)
-            return living.getCustomName() == null ?
-                    ((Player) living).getDisplayName() : living.getCustomName();
-        else
-        {
-            // format name
-            String entityName = living.getType().name().toLowerCase();
-            entityName = entityName.substring(0, 1).toUpperCase()
-                    + entityName.substring(1);
-            
-            return living.getCustomName() == null ?
-                    entityName : living.getCustomName();
-        }
+        // format name
+        String entityName = living.getType().name().toLowerCase();
+        entityName = entityName.substring(0, 1).toUpperCase()
+                + entityName.substring(1);
+        
+        return living.getCustomName() == null ?
+                (showMobNames ? entityName : "") : living.getCustomName();
     }
     
     /**
@@ -131,22 +166,52 @@ public class SimpleHealthbarsListener implements Listener
      */
     private String formatHealthBar(LivingEntity entity, double eventDamage)
     {
-        float proportion = (float) ((entity.getHealth() - eventDamage) / entity.getMaxHealth());
-        int hasHealth = Math.round(BAR_LENGTH * proportion);
-        StringBuilder health =
-                new StringBuilder(ChatColor.WHITE.toString())
-                        .append('[')
-                        .append(ChatColor.DARK_GREEN.toString());
+        float proportion = (float) ((entity.getHealth() - eventDamage) / entity
+                .getMaxHealth());
+        int hasHealth = Math.round(barLength * proportion);
+        StringBuilder health = new StringBuilder();
+        
+        // show brackets if we are displaying the mob's name
+        if (showMobNames) health.append(ChatColor.WHITE.toString()).append('[');
+        
+        health.append(ChatColor.DARK_GREEN.toString());
         
         // construct has health part
         for (int i = 0; i < hasHealth; i++)
-            health.append(BAR_CHAR);
+            health.append(barChar);
         
         // empty health
         health.append(ChatColor.DARK_RED.toString());
-        for (int i = hasHealth; i < BAR_LENGTH; i++)
-            health.append(BAR_CHAR);
+        for (int i = hasHealth; i < barLength; i++)
+            health.append(barChar);
+
+        // show brackets if we are displaying the mob's name
+        if (showMobNames) health.append(ChatColor.WHITE.toString()).append(']');
         
-        return health.append(ChatColor.WHITE.toString()).append(']').toString();
+        return health.toString();
     }
+    
+    /**
+     * Check if the entity type is a boss mob
+     * 
+     * Current boss mobs:
+     * -ender dragon
+     * -wither
+     * 
+     * @param entityType
+     *            type of entity
+     * @return if entity is a boss
+     */
+    private boolean isBoss(EntityType entityType)
+    {
+        switch (entityType)
+        {
+            case ENDER_DRAGON:
+            case WITHER:
+                return true;
+            default:
+                return false;
+        }
+    }
+    
 }
