@@ -1,3 +1,0 @@
-bar-length: 20       # 20 char long bar
-bar-char: 0x25ae     # vertical rectangle
-show-mob-names: true # show mob names beside health bar

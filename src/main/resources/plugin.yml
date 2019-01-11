@@ -1,0 +1,5 @@
+name: SimpleHealthbars
+main: org.simplemc.simplehealthbars.SimpleHealthbars
+version: 1.13.0
+website: https://github.com/SimpleMC/SimpleHealthbars
+author: tajobe
