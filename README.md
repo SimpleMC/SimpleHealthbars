@@ -1,4 +1,3 @@
-SimpleHealthbars
-============
+~~SimpleHealthbars~~
 
-Health Bars for Minecraft
+https://github.com/SimpleMC/SimpleHealthbars2
